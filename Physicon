@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Песочница: Физический конструктор</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+        
+        body {
+            overflow: hidden;
+            background: linear-gradient(135deg, #0c2461 0%, #1e3799 100%);
+            color: white;
+            height: 100vh;
+        }
+        
+        .game-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+        
+        /* Панель инструментов */
+        .toolbar {
+            width: 220px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px 15px;
+            display: flex;
+            flex-direction: column;
+            border-right: 3px solid #4a69bd;
+            box-shadow: 5px 0 15px rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        
+        .toolbar-header {
+            text-align: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #4a69bd;
+        }
+        
+        h1 {
+            font-size: 1.8rem;
+            color: #4a69bd;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .toolbar-subtitle {
+            color: #82ccdd;
+            font-size: 0.9rem;
+        }
+        
+        /* Разделы инструментов */
+        .tool-section {
+            margin-bottom: 25px;
+        }
+        
+        .tool-section h3 {
+            color: #82ccdd;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .tool-section h3::before {
+            content: "▶";
+            margin-right: 8px;
+            font-size: 0.8rem;
+        }
+        
+        /* Инструменты */
+        .tools {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .tool {
+            background: rgba(30, 55, 153, 0.7);
+            border: 2px solid #4a69bd;
+            border-radius: 8px;
+            padding: 12px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tool:hover {
+            transform: translateY(-3px);
+            background: rgba(52, 152, 219, 0.8);
+            border-color: #3498db;
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .tool.active {
+            background: rgba(46, 204, 113, 0.9);
+            border-color: #2ecc71;
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.7);
+        }
+        
+        .tool-icon {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        
+        .tool-name {
+            font-size: 0.85rem;
+            text-align: center;
+        }
+        
+        /* Холст игры */
+        .game-area {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #gameCanvas {
+            background: #0c2461;
+            display: block;
+            cursor: crosshair;
+        }
+        
+        /* Статистика и управление */
+        .stats-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4a69bd;
+            min-width: 200px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+        }
+        
+        .stat-value {
+            color: #2ecc71;
+            font-weight: bold;
+        }
+        
+        /* Панель управления */
+        .controls-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            background: rgba(30, 55, 153, 0.9);
+            border: 2px solid #4a69bd;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            background: rgba(52, 152, 219, 0.9);
+            border-color: #3498db;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        
+        /* Инструкции */
+        .instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 2px solid #4a69bd;
+            max-width: 300px;
+        }
+        
+        .instructions h3 {
+            color: #82ccdd;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        
+        .instructions p {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .key {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            border: 1px solid #4a69bd;
+        }
+        
+        /* Модальное окно материалов */
+        .material-selector {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(12, 36, 97, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            border: 3px solid #4a69bd;
+            display: none;
+            z-index: 100;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+        }
+        
+        .material-selector.active {
+            display: block;
+        }
+        
+        .material-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .material-header h2 {
+            color: #82ccdd;
+        }
+        
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+        
+        .materials-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+        }
+        
+        .material-item {
+            background: rgba(30, 55, 153, 0.8);
+            border: 2px solid #4a69bd;
+            border-radius: 8px;
+            padding: 15px 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .material-item:hover {
+            transform: translateY(-5px);
+            background: rgba(52, 152, 219, 0.9);
+            border-color: #3498db;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+        }
+        
+        .material-color {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-bottom: 10px;
+            border: 2px solid white;
+        }
+        
+        .material-name {
+            font-size: 0.9rem;
+            text-align: center;
+        }
+        
+        /* Адаптивность */
+        @media (max-width: 1100px) {
+            .toolbar {
+                width: 180px;
+            }
+            
+            .tools {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 800px) {
+            .game-container {
+                flex-direction: column;
+            }
+            
+            .toolbar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+                padding: 10px;
+            }
+            
+            .toolbar-header {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            .tool-section {
+                margin-bottom: 10px;
+                width: 48%;
+            }
+            
+            .tools {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stats-panel, .instructions {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- Панель инструментов -->
+        <div class="toolbar">
+            <div class="toolbar-header">
+                <h1>ФИЗИЧЕСКАЯ ПЕСОЧНИЦА</h1>
+                <div class="toolbar-subtitle">Создавайте и экспериментируйте</div>
+            </div>
+            
+            <!-- Инструменты создания -->
+            <div class="tool-section">
+                <h3>СОЗДАНИЕ</h3>
+                <div class="tools">
+                    <div class="tool active" id="tool-sand">
+                        <div class="tool-icon">●</div>
+                        <div class="tool-name">Песок</div>
+                    </div>
+                    <div class="tool" id="tool-water">
+                        <div class="tool-icon">~</div>
+                        <div class="tool-name">Вода</div>
+                    </div>
+                    <div class="tool" id="tool-stone">
+                        <div class="tool-icon">■</div>
+                        <div class="tool-name">Камень</div>
+                    </div>
+                    <div class="tool" id="tool-wood">
+                        <div class="tool-icon">▤</div>
+                        <div class="tool-name">Дерево</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Инструменты действия -->
+            <div class="tool-section">
+                <h3>ИНСТРУМЕНТЫ</h3>
+                <div class="tools">
+                    <div class="tool" id="tool-brush">
+                        <div class="tool-icon">🖌️</div>
+                        <div class="tool-name">Кисть</div>
+                    </div>
+                    <div class="tool" id="tool-erase">
+                        <div class="tool-icon">❌</div>
+                        <div class="tool-name">Ластик</div>
+                    </div>
+                    <div class="tool" id="tool-explode">
+                        <div class="tool-icon">💣</div>
+                        <div class="tool-name">Взрыв</div>
+                    </div>
+                    <div class="tool" id="tool-dynamic">
+                        <div class="tool-icon">⚙️</div>
+                        <div class="tool-name">Динамика</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Дополнительные материалы -->
+            <div class="tool-section">
+                <h3>ДОПОЛНИТЕЛЬНО</h3>
+                <div class="tools">
+                    <div class="tool" id="tool-more">
+                        <div class="tool-icon">➕</div>
+                        <div class="tool-name">Больше материалов</div>
+                    </div>
+                    <div class="tool" id="tool-gravity">
+                        <div class="tool-icon">↓</div>
+                        <div class="tool-name">Гравитация ВКЛ</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Игровая область -->
+        <div class="game-area">
+            <canvas id="gameCanvas"></canvas>
+            
+            <!-- Панель статистики -->
+            <div class="stats-panel">
+                <div class="stat">
+                    <span>Элементов:</span>
+                    <span id="particleCount" class="stat-value">0</span>
+                </div>
+                <div class="stat">
+                    <span>ФПС:</span>
+                    <span id="fpsCounter" class="stat-value">60</span>
+                </div>
+                <div class="stat">
+                    <span>Инструмент:</span>
+                    <span id="currentTool" class="stat-value">Песок</span>
+                </div>
+                <div class="stat">
+                    <span>Размер кисти:</span>
+                    <span id="brushSize" class="stat-value">5</span>
+                </div>
+            </div>
+            
+            <!-- Панель управления -->
+            <div class="controls-panel">
+                <button class="control-btn" id="clearBtn">Очистить</button>
+                <button class="control-btn" id="resetBtn">Сбросить</button>
+                <button class="control-btn" id="saveBtn">Сохранить</button>
+                <button class="control-btn" id="loadBtn">Загрузить</button>
+            </div>
+            
+            <!-- Инструкции -->
+            <div class="instructions">
+                <h3>Управление:</h3>
+                <p><span class="key">ЛКМ</span> - создавать/удалять</p>
+                <p><span class="key">ПКМ</span> - панорамировать</p>
+                <p><span class="key">Колесо</span> - масштаб</p>
+                <p><span class="key">1-9</span> - размер кисти</p>
+                <p><span class="key">C</span> - очистить экран</p>
+                <p><span class="key">G</span> - гравитация</p>
+            </div>
+        </div>
+        
+        <!-- Модальное окно материалов -->
+        <div class="material-selector" id="materialSelector">
+            <div class="material-header">
+                <h2>Выберите материал</h2>
+                <button class="close-btn" id="closeMaterialBtn">×</button>
+            </div>
+            <div class="materials-grid" id="materialsGrid">
+                <!-- Материалы будут добавлены через JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Основные элементы DOM
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const particleCountElement = document.getElementById('particleCount');
+        const fpsCounterElement = document.getElementById('fpsCounter');
+        const currentToolElement = document.getElementById('currentTool');
+        const brushSizeElement = document.getElementById('brushSize');
+        const clearBtn = document.getElementById('clearBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const saveBtn = document.getElementById('saveBtn');
+        const loadBtn = document.getElementById('loadBtn');
+        const materialSelector = document.getElementById('materialSelector');
+        const closeMaterialBtn = document.getElementById('closeMaterialBtn');
+        const materialsGrid = document.getElementById('materialsGrid');
+        
+        // Настройки холста
+        canvas.width = window.innerWidth - 220;
+        canvas.height = window.innerHeight;
+        
+        // Переменные игры
+        let particles = [];
+        let grid = [];
+        let gridWidth, gridHeight;
+        let cellSize = 4;
+        let gravity = true;
+        let gravityStrength = 0.2;
+        let currentMaterial = 'sand';
+        let currentTool = 'sand';
+        let brushSize = 5;
+        let isDrawing = false;
+        let isErasing = false;
+        let isPanning = false;
+        let lastMouseX = 0;
+        let lastMouseY = 0;
+        let offsetX = 0;
+        let offsetY = 0;
+        let scale = 1;
+        let fps = 60;
+        let lastFrameTime = 0;
+        
+        // Материалы и их свойства
+        const materials = {
+            sand: {
+                name: 'Песок',
+                color: '#f1c40f',
+                density: 1.5,
+                friction: 0.5,
+                viscosity: 0,
+                movable: true,
+                liquid: false
+            },
+            water: {
+                name: 'Вода',
+                color: '#3498db',
+                density: 1.0,
+                friction: 0.1,
+                viscosity: 0.3,
+                movable: true,
+                liquid: true
+            },
+            stone: {
+                name: 'Камень',
+                color: '#95a5a6',
+                density: 2.5,
+                friction: 0.8,
+                viscosity: 0,
+                movable: false,
+                liquid: false
+            },
+            wood: {
+                name: 'Дерево',
+                color: '#8b4513',
+                density: 0.8,
+                friction: 0.6,
+                viscosity: 0,
+                movable: false,
+                liquid: false
+            },
+            fire: {
+                name: 'Огонь',
+                color: '#e74c3c',
+                density: -0.5,
+                friction: 0,
+                viscosity: 0,
+                movable: true,
+                liquid: false,
+                lifetime: 100
+            },
+            oil: {
+                name: 'Масло',
+                color: '#2c3e50',
+                density: 0.9,
+                friction: 0.05,
+                viscosity: 0.5,
+                movable: true,
+                liquid: true
+            },
+            ice: {
+                name: 'Лёд',
+                color: '#a3d9f7',
+                density: 0.9,
+                friction: 0.1,
+                viscosity: 0,
+                movable: false,
+                liquid: false
+            },
+            lava: {
+                name: 'Лава',
+                color: '#e67e22',
+                density: 2.0,
+                friction: 0.3,
+                viscosity: 0.7,
+                movable: true,
+                liquid: true
+            }
+        };
+        
+        // Инициализация сетки
+        function initGrid() {
+            gridWidth = Math.ceil(canvas.width / cellSize);
+            gridHeight = Math.ceil(canvas.height / cellSize);
+            
+            grid = new Array(gridWidth);
+            for (let x = 0; x < gridWidth; x++) {
+                grid[x] = new Array(gridHeight);
+                for (let y = 0; y < gridHeight; y++) {
+                    grid[x][y] = null;
+                }
+            }
+        }
+        
+        // Класс частицы
+        class Particle {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type;
+                this.vx = 0;
+                this.vy = 0;
+                this.material = materials[type];
+                this.lifetime = this.material.lifetime || Infinity;
+                this.age = 0;
+                
+                // Добавляем частицу в сетку
+                const gridX = Math.floor(this.x / cellSize);
+                const gridY = Math.floor(this.y / cellSize);
+                if (gridX >= 0 && gridX < gridWidth && gridY >= 0 && gridY < gridHeight) {
+                    grid[gridX][gridY] = this;
+                }
+            }
+            
+            update() {
+                this.age++;
+                if (this.age > this.lifetime) {
+                    this.remove();
+                    return;
+                }
+                
+                // Удаляем из старой позиции в сетке
+                const oldGridX = Math.floor(this.x / cellSize);
+                const oldGridY = Math.floor(this.y / cellSize);
+                if (grid[oldGridX] && grid[oldGridX][oldGridY] === this) {
+                    grid[oldGridX][oldGridY] = null;
+                }
+                
+                // Применяем физику
+                if (this.material.movable) {
+                    // Гравитация
+                    if (gravity && this.material.density > 0) {
+                        this.vy += gravityStrength * this.material.density;
+                    } else if (gravity && this.material.density < 0) {
+                        this.vy -= gravityStrength * Math.abs(this.material.density);
+                    }
+                    
+                    // Вязкость
+                    this.vx *= (1 - this.material.viscosity);
+                    this.vy *= (1 - this.material.viscosity);
+                    
+                    // Обновляем позицию
+                    this.x += this.vx;
+                    this.y += this.vy;
+                    
+                    // Проверяем столкновения
+                    this.checkCollisions();
+                }
+                
+                // Ограничиваем позицию частицы пределами холста
+                this.x = Math.max(0, Math.min(canvas.width - 1, this.x));
+                this.y = Math.max(0, Math.min(canvas.height - 1, this.y));
+                
+                // Добавляем в новую позицию в сетке
+                const newGridX = Math.floor(this.x / cellSize);
+                const newGridY = Math.floor(this.y / cellSize);
+                if (newGridX >= 0 && newGridX < gridWidth && newGridY >= 0 && newGridY < gridHeight) {
+                    grid[newGridX][newGridY] = this;
+                }
+            }
+            
+            checkCollisions() {
+                const gridX = Math.floor(this.x / cellSize);
+                const gridY = Math.floor(this.y / cellSize);
+                
+                // Проверяем ячейки вокруг
+                for (let dx = -1; dx <= 1; dx++) {
+                    for (let dy = -1; dy <= 1; dy++) {
+                        const checkX = gridX + dx;
+                        const checkY = gridY + dy;
+                        
+                        if (checkX >= 0 && checkX < gridWidth && checkY >= 0 && checkY < gridHeight) {
+                            const other = grid[checkX][checkY];
+                            
+                            if (other && other !== this) {
+                                // Простая проверка столкновения
+                                const dist = Math.sqrt(
+                                    Math.pow(this.x - other.x, 2) + 
+                                    Math.pow(this.y - other.y, 2)
+                                );
+                                
+                                if (dist < cellSize) {
+                                    // Для жидкостей - растекание
+                                    if (this.material.liquid) {
+                                        if (dx === 0 && dy === 1) {
+                                            // Если снизу твердая поверхность, растекаемся в стороны
+                                            if (!other.material.liquid) {
+                                                this.vx += (Math.random() - 0.5) * 2;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Отталкивание
+                                    const angle = Math.atan2(this.y - other.y, this.x - other.x);
+                                    const force = 0.5;
+                                    
+                                    this.vx += Math.cos(angle) * force;
+                                    this.vy += Math.sin(angle) * force;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            draw() {
+                ctx.fillStyle = this.material.color;
+                ctx.fillRect(this.x, this.y, cellSize, cellSize);
+                
+                // Добавляем эффекты для некоторых материалов
+                if (this.type === 'fire') {
+                    // Пламя мерцает
+                    const intensity = 0.5 + 0.5 * Math.sin(this.age * 0.1);
+                    ctx.fillStyle = `rgba(231, 76, 60, ${intensity})`;
+                    ctx.fillRect(this.x, this.y, cellSize, cellSize);
+                } else if (this.type === 'water') {
+                    // Вода переливается
+                    ctx.fillStyle = '#2980b9';
+                    ctx.fillRect(this.x + 1, this.y + 1, cellSize - 2, cellSize - 2);
+                }
+            }
+            
+            remove() {
+                // Удаляем из сетки
+                const gridX = Math.floor(this.x / cellSize);
+                const gridY = Math.floor(this.y / cellSize);
+                if (grid[gridX] && grid[gridX][gridY] === this) {
+                    grid[gridX][gridY] = null;
+                }
+                
+                // Удаляем из массива частиц
+                const index = particles.indexOf(this);
+                if (index !== -1) {
+                    particles.splice(index, 1);
+                }
+            }
+        }
+        
+        // Создание частиц
+        function createParticles(x, y, count, type) {
+            for (let i = 0; i < count; i++) {
+                // Случайное смещение для эффекта разброса
+                const offsetX = (Math.random() - 0.5) * brushSize * 2;
+                const offsetY = (Math.random() - 0.5) * brushSize * 2;
+                
+                const particleX = x + offsetX;
+                const particleY = y + offsetY;
+                
+                // Проверяем, не выходит ли за пределы
+                if (particleX >= 0 && particleX < canvas.width && 
+                    particleY >= 0 && particleY < canvas.height) {
+                    
+                    // Для инструмента "взрыв" создаем частицы с разной скоростью
+                    if (currentTool === 'explode') {
+                        const particle = new Particle(particleX, particleY, 'fire');
+                        particle.vx = (Math.random() - 0.5) * 10;
+                        particle.vy = (Math.random() - 0.5) * 10 - 5;
+                        particles.push(particle);
+                    } 
+                    // Для инструмента "динамика" создаем движущиеся частицы
+                    else if (currentTool === 'dynamic') {
+                        const particle = new Particle(particleX, particleY, type);
+                        particle.vx = (Math.random() - 0.5) * 4;
+                        particle.vy = (Math.random() - 0.5) * 4;
+                        particles.push(particle);
+                    }
+                    // Для остальных инструментов создаем обычные частицы
+                    else {
+                        particles.push(new Particle(particleX, particleY, type));
+                    }
+                }
+            }
+        }
+        
+        // Удаление частиц в области
+        function eraseParticles(x, y, radius) {
+            const radiusSquared = radius * radius;
+            
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const particle = particles[i];
+                const dx = particle.x - x;
+                const dy = particle.y - y;
+                const distSquared = dx * dx + dy * dy;
+                
+                if (distSquared <= radiusSquared) {
+                    particle.remove();
+                }
+            }
+        }
+        
+        // Очистка холста
+        function clearCanvas() {
+            particles = [];
+            initGrid();
+        }
+        
+        // Обновление игры
+        function update() {
+            // Обновляем все частицы
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+            }
+            
+            // Ограничиваем количество частиц для производительности
+            if (particles.length > 10000) {
+                particles.splice(0, particles.length - 8000);
+            }
+            
+            // Обновляем статистику
+            particleCountElement.textContent = particles.length;
+        }
+        
+        // Отрисовка игры
+        function draw() {
+            // Очищаем холст
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем фон
+            ctx.fillStyle = '#0c2461';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Рисуем сетку (только для отладки)
+            // drawGrid();
+            
+            // Рисуем все частицы
+            for (const particle of particles) {
+                particle.draw();
+            }
+            
+            // Рисуем курсор кисти
+            if (currentTool !== 'pan') {
+                drawBrushCursor();
+            }
+        }
+        
+        // Рисуем сетку (для отладки)
+        function drawGrid() {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 0.5;
+            
+            for (let x = 0; x <= gridWidth; x++) {
+                ctx.beginPath();
+                ctx.moveTo(x * cellSize, 0);
+                ctx.lineTo(x * cellSize, canvas.height);
+                ctx.stroke();
+            }
+            
+            for (let y = 0; y <= gridHeight; y++) {
+                ctx.beginPath();
+                ctx.moveTo(0, y * cellSize);
+                ctx.lineTo(canvas.width, y * cellSize);
+                ctx.stroke();
+            }
+        }
+        
+        // Рисуем курсор кисти
+        function drawBrushCursor() {
+            ctx.beginPath();
+            ctx.arc(lastMouseX, lastMouseY, brushSize * cellSize, 0, Math.PI * 2);
+            
+            if (currentTool === 'erase') {
+                ctx.strokeStyle = 'rgba(231, 76, 60, 0.8)';
+                ctx.fillStyle = 'rgba(231, 76, 60, 0.2)';
+            } else if (currentTool === 'explode') {
+                ctx.strokeStyle = 'rgba(230, 126, 34, 0.8)';
+                ctx.fillStyle = 'rgba(230, 126, 34, 0.2)';
+            } else {
+                ctx.strokeStyle = 'rgba(52, 152, 219, 0.8)';
+                ctx.fillStyle = 'rgba(52, 152, 219, 0.2)';
+            }
+            
+            ctx.lineWidth = 2;
+            ctx.fill();
+            ctx.stroke();
+            
+            // Показываем текущий материал в центре
+            if (currentTool !== 'erase' && currentTool !== 'explode' && currentTool !== 'dynamic') {
+                ctx.fillStyle = materials[currentMaterial].color;
+                ctx.beginPath();
+                ctx.arc(lastMouseX, lastMouseY, 3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Обновление FPS
+        function updateFPS() {
+            const now = performance.now();
+            const delta = now - lastFrameTime;
+            
+            if (delta > 0) {
+                fps = Math.round(1000 / delta);
+                fpsCounterElement.textContent = fps;
+            }
+            
+            lastFrameTime = now;
+        }
+        
+        // Игровой цикл
+        function gameLoop() {
+            update();
+            draw();
+            updateFPS();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Обработка нажатий мыши
+        canvas.addEventListener('mousedown', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Правая кнопка мыши - панорамирование
+            if (e.button === 2) {
+                isPanning = true;
+                lastMouseX = x;
+                lastMouseY = y;
+                return;
+            }
+            
+            // Левая кнопка мыши - рисование/удаление
+            isDrawing = true;
+            
+            if (currentTool === 'erase') {
+                eraseParticles(x, y, brushSize * cellSize);
+                isErasing = true;
+            } else if (currentTool === 'explode') {
+                createParticles(x, y, 50, 'fire');
+            } else if (currentTool === 'dynamic') {
+                createParticles(x, y, 20, currentMaterial);
+            } else {
+                createParticles(x, y, brushSize * 3, currentMaterial);
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            lastMouseX = x;
+            lastMouseY = y;
+            
+            // Панорамирование
+            if (isPanning) {
+                offsetX += (x - lastMouseX) * 0.5;
+                offsetY += (y - lastMouseY) * 0.5;
+                return;
+            }
+            
+            // Рисование/удаление
+            if (isDrawing) {
+                if (currentTool === 'erase' || isErasing) {
+                    eraseParticles(x, y, brushSize * cellSize);
+                } else if (currentTool === 'explode') {
+                    createParticles(x, y, 10, 'fire');
+                } else if (currentTool === 'dynamic') {
+                    createParticles(x, y, 5, currentMaterial);
+                } else {
+                    createParticles(x, y, brushSize, currentMaterial);
+                }
+            }
+        });
+        
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+            isErasing = false;
+            isPanning = false;
+        });
+        
+        canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // Отключаем контекстное меню
+        });
+        
+        // Обработка колесика мыши для изменения размера кисти
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            
+            if (e.deltaY < 0) {
+                // Прокрутка вверх - увеличиваем кисть
+                brushSize = Math.min(20, brushSize + 1);
+            } else {
+                // Прокрутка вниз - уменьшаем кисть
+                brushSize = Math.max(1, brushSize - 1);
+            }
+            
+            brushSizeElement.textContent = brushSize;
+        });
+        
+        // Обработка клавиатуры
+        document.addEventListener('keydown', (e) => {
+            // Цифры 1-9 для изменения размера кисти
+            if (e.key >= '1' && e.key <= '9') {
+                brushSize = parseInt(e.key);
+                brushSizeElement.textContent = brushSize;
+            }
+            
+            // Буквенные клавиши для быстрого выбора инструментов
+            switch(e.key.toLowerCase()) {
+                case 'c':
+                    clearCanvas();
+                    break;
+                case 'g':
+                    gravity = !gravity;
+                    document.getElementById('tool-gravity').querySelector('.tool-name').textContent = 
+                        gravity ? 'Гравитация ВКЛ' : 'Гравитация ВЫКЛ';
+                    break;
+                case 'e':
+                    selectTool('erase');
+                    break;
+                case 'b':
+                    selectTool('brush');
+                    break;
+                case 's':
+                    selectTool('sand');
+                    break;
+                case 'w':
+                    selectTool('water');
+                    break;
+                case 'r':
+                    selectTool('stone');
+                    break;
+            }
+        });
+        
+        // Обработка инструментов
+        function setupToolButtons() {
+            // Инструменты создания
+            document.getElementById('tool-sand').addEventListener('click', () => selectTool('sand'));
+            document.getElementById('tool-water').addEventListener('click', () => selectTool('water'));
+            document.getElementById('tool-stone').addEventListener('click', () => selectTool('stone'));
+            document.getElementById('tool-wood').addEventListener('click', () => selectTool('wood'));
+            
+            // Инструменты действия
+            document.getElementById('tool-brush').addEventListener('click', () => selectTool('brush'));
+            document.getElementById('tool-erase').addEventListener('click', () => selectTool('erase'));
+            document.getElementById('tool-explode').addEventListener('click', () => selectTool('explode'));
+            document.getElementById('tool-dynamic').addEventListener('click', () => selectTool('dynamic'));
+            
+            // Дополнительные инструменты
+            document.getElementById('tool-more').addEventListener('click', showMaterialSelector);
+            document.getElementById('tool-gravity').addEventListener('click', toggleGravity);
+            
+            // Кнопки управления
+            clearBtn.addEventListener('click', clearCanvas);
+            resetBtn.addEventListener('click', () => {
+                clearCanvas();
+                gravity = true;
+                currentTool = 'sand';
+                currentMaterial = 'sand';
+                brushSize = 5;
+                updateUI();
+            });
+            
+            saveBtn.addEventListener('click', saveSandbox);
+            loadBtn.addEventListener('click', loadSandbox);
+            
+            // Закрытие модального окна материалов
+            closeMaterialBtn.addEventListener('click', () => {
+                materialSelector.classList.remove('active');
+            });
+        }
+        
+        // Выбор инструмента
+        function selectTool(tool) {
+            currentTool = tool;
+            
+            // Если это инструмент создания, устанавливаем соответствующий материал
+            if (['sand', 'water', 'stone', 'wood'].includes(tool)) {
+                currentMaterial = tool;
+            }
+            
+            // Если это динамика, используем текущий материал
+            if (tool === 'dynamic') {
+                // Оставляем текущий материал
+            }
+            
+            updateUI();
+        }
+        
+        // Обновление интерфейса
+        function updateUI() {
+            // Сбрасываем активный класс у всех инструментов
+            document.querySelectorAll('.tool').forEach(tool => {
+                tool.classList.remove('active');
+            });
+            
+            // Устанавливаем активный класс текущему инструменту
+            document.getElementById(`tool-${currentTool}`).classList.add('active');
+            
+            // Обновляем текст текущего инструмента
+            if (currentTool === 'erase') {
+                currentToolElement.textContent = 'Ластик';
+            } else if (currentTool === 'explode') {
+                currentToolElement.textContent = 'Взрыв';
+            } else if (currentTool === 'dynamic') {
+                currentToolElement.textContent = `Динамика (${materials[currentMaterial].name})`;
+            } else if (currentTool === 'brush') {
+                currentToolElement.textContent = `Кисть (${materials[currentMaterial].name})`;
+            } else {
+                currentToolElement.textContent = materials[currentMaterial].name;
+            }
+            
+            brushSizeElement.textContent = brushSize;
+        }
+        
+        // Переключение гравитации
+        function toggleGravity() {
+            gravity = !gravity;
+            const gravityTool = document.getElementById('tool-gravity');
+            gravityTool.querySelector('.tool-name').textContent = 
+                gravity ? 'Гравитация ВКЛ' : 'Гравитация ВЫКЛ';
+        }
+        
+        // Показать выбор материалов
+        function showMaterialSelector() {
+            // Очищаем сетку материалов
+            materialsGrid.innerHTML = '';
+            
+            // Добавляем все материалы
+            for (const [id, material] of Object.entries(materials)) {
+                const materialItem = document.createElement('div');
+                materialItem.className = 'material-item';
+                materialItem.innerHTML = `
+                    <div class="material-color" style="background-color: ${material.color}"></div>
+                    <div class="material-name">${material.name}</div>
+                `;
+                
+                materialItem.addEventListener('click', () => {
+                    currentMaterial = id;
+                    currentTool = id;
+                    materialSelector.classList.remove('active');
+                    updateUI();
+                });
+                
+                materialsGrid.appendChild(materialItem);
+            }
+            
+            // Показываем модальное окно
+            materialSelector.classList.add('active');
+        }
+        
+        // Сохранение песочницы
+        function saveSandbox() {
+            const sandboxData = {
+                particles: particles.map(p => ({
+                    x: p.x,
+                    y: p.y,
+                    type: p.type
+                })),
+                gravity: gravity,
+                currentMaterial: currentMaterial,
+                currentTool: currentTool,
+                brushSize: brushSize
+            };
+            
+            const dataStr = JSON.stringify(sandboxData);
+            localStorage.setItem('sandboxSave', dataStr);
+            
+            alert('Песочница сохранена!');
+        }
+        
+        // Загрузка песочницы
+        function loadSandbox() {
+            const savedData = localStorage.getItem('sandboxSave');
+            
+            if (savedData) {
+                try {
+                    const sandboxData = JSON.parse(savedData);
+                    
+                    // Очищаем текущую песочницу
+                    clearCanvas();
+                    
+                    // Восстанавливаем настройки
+                    gravity = sandboxData.gravity;
+                    currentMaterial = sandboxData.currentMaterial;
+                    currentTool = sandboxData.currentTool;
+                    brushSize = sandboxData.brushSize;
+                    
+                    // Восстанавливаем частицы
+                    sandboxData.particles.forEach(p => {
+                        particles.push(new Particle(p.x, p.y, p.type));
+                    });
+                    
+                    updateUI();
+                    alert('Песочница загружена!');
+                } catch (e) {
+                    alert('Ошибка загрузки сохранения');
+                }
+            } else {
+                alert('Нет сохраненных данных');
+            }
+        }
+        
+        // Инициализация игры
+        function init() {
+            initGrid();
+            setupToolButtons();
+            updateUI();
+            gameLoop();
+        }
+        
+        // Запуск при загрузке страницы
+        window.addEventListener('load', init);
+        
+        // Изменение размера холста при изменении размера окна
+        window.addEventListener('resize', () => {
+            canvas.width = window.innerWidth - 220;
+            canvas.height = window.innerHeight;
+            initGrid();
+        });
+    </script>
+</body>
+</html>
